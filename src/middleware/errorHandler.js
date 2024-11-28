@@ -35,9 +35,14 @@ const errorHandler = (err, req, res, next) => {
             error.statusCode = 400;
         }
 
-        res.status(error.statusCode).json({
-            status: 'error',
-            message: error.message || 'Internal server error'
+        res.header("Access-Control-Allow-Origin", "http://localhost:5501");
+        res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+        
+        res.status(statusCode).json({
+            status: status,
+            error: err,
+            message: err.message,
+            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
         });
     }
 };

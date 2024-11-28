@@ -10,6 +10,13 @@ const errorHandler = require('./middleware/errorHandler');
 // Initialize express app
 const app = express();
 
+app.use(cors({
+    origin: ['http://localhost:5501', 'http://127.0.0.1:5501', 'https://your-production-domain.com'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 // Rate limiting configuration
 const limiter = rateLimit({
     windowMs: process.env.RATE_LIMIT_WINDOW * 60 * 1000, // Default: 15 minutes
@@ -17,11 +24,6 @@ const limiter = rateLimit({
     message: 'Too many requests from this IP, please try again later.'
 });
 
-// Global Middleware
-app.use(cors({
-    origin: '*', // In production, replace with your frontend URL
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']
-}));
 app.use(express.json({ limit: '10kb' })); // Body parser with size limit
 app.use(morgan('dev')); // Logging in development
 app.use(limiter); // Apply rate limiting
@@ -35,6 +37,8 @@ app.get('/health', (req, res) => {
         environment: process.env.NODE_ENV
     });
 });
+
+app.options('*', cors()); // Enable pre-flight for all routes
 
 // API Routes
 app.use('/api/venues', venueRoutes);
