@@ -11,7 +11,7 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 
 app.use(cors({
-    origin: ['http://localhost:5501', 'http://127.0.0.1:5501', 'https://your-production-domain.com'],
+    origin: ['http://localhost:5501', 'http://127.0.0.1:5501', 'https://italia-map.netlify.app' ],
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
