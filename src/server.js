@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const venueRoutes = require('./routes/venueRoutes');
 const errorHandler = require('./middleware/errorHandler');
+const adminRoutes = require('./routes/adminRoutes');
 
 // Initialize express app
 const app = express();
@@ -42,6 +43,7 @@ app.options('*', cors()); // Enable pre-flight for all routes
 
 // API Routes
 app.use('/api/venues', venueRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Handle undefined routes
 app.all('*', (req, res) => {
