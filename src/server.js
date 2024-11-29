@@ -20,14 +20,29 @@ app.use(cors({
 
 // Rate limiting configuration
 const limiter = rateLimit({
-    windowMs: process.env.RATE_LIMIT_WINDOW * 60 * 1000, // Default: 15 minutes
-    max: process.env.RATE_LIMIT_MAX, // Default: 100 requests per window
-    message: 'Too many requests from this IP, please try again later.'
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Allow 100 requests per window
+    message: {
+        status: 'error',
+        message: 'Too many requests from this IP, please try again later.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+// Create a separate, more lenient limiter for login attempts
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20, // Allow 20 login attempts per 15 minutes
+    message: {
+        status: 'error',
+        message: 'Too many login attempts, please try again later.'
+    }
 });
 
 app.use(express.json({ limit: '10kb' })); // Body parser with size limit
 app.use(morgan('dev')); // Logging in development
-app.use(limiter); // Apply rate limiting
+app.use('/api', limiter);
 
 // Health Check Route
 app.get('/health', (req, res) => {
@@ -44,6 +59,8 @@ app.options('*', cors()); // Enable pre-flight for all routes
 // API Routes
 app.use('/api/venues', venueRoutes);
 app.use('/api/admin', adminRoutes);
+
+app.use('/api/admin/login', loginLimiter);
 
 // Handle undefined routes
 app.all('*', (req, res) => {
