@@ -29,19 +29,31 @@ const adminSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Hash password before saving
+
 adminSchema.pre('save', async function(next) {
     // Only hash password if it's modified
     if (!this.isModified('password')) return next();
     
     // Hash password with cost of 12
     this.password = await bcrypt.hash(this.password, 12);
+    
+    // Update passwordChangedAt field
+    this.passwordChangedAt = Date.now() - 1000;
     next();
 });
 
 // Method to check password
 adminSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
     return await bcrypt.compare(candidatePassword, userPassword);
+};
+
+// Method to check if password was changed after token was issued
+adminSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
+    if (this.passwordChangedAt) {
+        const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
+        return JWTTimestamp < changedTimestamp;
+    }
+    return false;
 };
 
 const Admin = mongoose.model('Admin', adminSchema);

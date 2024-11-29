@@ -3,10 +3,9 @@ const Admin = require('../models/Admin');
 
 exports.protect = async (req, res, next) => {
     try {
+        // 1. Get token and check if it exists
         let token;
-        
-        // Check if token exists in headers
-        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        if (req.headers.authorization?.startsWith('Bearer')) {
             token = req.headers.authorization.split(' ')[1];
         }
 
@@ -17,10 +16,10 @@ exports.protect = async (req, res, next) => {
             });
         }
 
-        // Verify token
+        // 2. Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Check if admin still exists
+        // 3. Check if admin still exists
         const currentAdmin = await Admin.findById(decoded.id);
         if (!currentAdmin) {
             return res.status(401).json({
@@ -29,11 +28,11 @@ exports.protect = async (req, res, next) => {
             });
         }
 
-        // Check if admin is active
-        if (!currentAdmin.active) {
+        // 4. Check if admin changed password after token was issued
+        if (currentAdmin.passwordChangedAt && decoded.iat < currentAdmin.passwordChangedAt.getTime() / 1000) {
             return res.status(401).json({
                 status: 'fail',
-                message: 'This admin account has been deactivated.'
+                message: 'Admin recently changed password. Please log in again.'
             });
         }
 
@@ -43,12 +42,11 @@ exports.protect = async (req, res, next) => {
     } catch (error) {
         return res.status(401).json({
             status: 'fail',
-            message: 'Invalid token or authorization failed'
+            message: 'Invalid token or session expired'
         });
     }
 };
 
-// Middleware for restricting access to super-admin only
 exports.restrictTo = (...roles) => {
     return (req, res, next) => {
         if (!roles.includes(req.admin.role)) {
