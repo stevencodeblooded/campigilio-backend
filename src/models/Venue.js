@@ -13,9 +13,17 @@ const venueSchema = new mongoose.Schema({
         index: true
     },
     category: {
-        type: String,
-        required: [true, 'Please add a category'],
-        enum: ['bars', 'clubs', 'restaurants', 'hotels', 'shops', 'skiresorts']
+        type: [String], // Changed from String to Array of Strings
+        required: [true, 'Please add at least one category'],
+        validate: {
+            validator: function(v) {
+                // Check if array is not empty and all values are valid categories
+                return v.length > 0 && v.every(cat => 
+                    ['bars', 'clubs', 'restaurants', 'hotels', 'shops', 'skiresorts'].includes(cat)
+                );
+            },
+            message: 'Please provide valid categories'
+        }
     },
     location: {
         type: {

@@ -13,7 +13,7 @@ exports.getVenues = catchAsync(async (req, res) => {
         category,
         lat,
         lng,
-        radius = 5000,  // Default 5km radius
+        radius = 5000,
         search,
         openNow
     } = req.query;
@@ -22,6 +22,7 @@ exports.getVenues = catchAsync(async (req, res) => {
 
     // Apply category filter
     if (category && category !== 'all') {
+        // Changed to handle single category filter in array
         query.category = category;
     }
 
@@ -86,6 +87,11 @@ exports.getVenue = catchAsync(async (req, res) => {
 
 // Create new venue
 exports.createVenue = catchAsync(async (req, res) => {
+    // Handle categories if they come as a comma-separated string
+    if (typeof req.body.category === 'string') {
+        req.body.category = req.body.category.split(',').map(cat => cat.trim());
+    }
+
     // Ensure coordinates are in correct format
     if (req.body.location) {
         req.body.location = {
@@ -107,6 +113,11 @@ exports.createVenue = catchAsync(async (req, res) => {
 
 // Update venue
 exports.updateVenue = catchAsync(async (req, res) => {
+    // Handle categories if they come as a comma-separated string
+    if (typeof req.body.category === 'string') {
+        req.body.category = req.body.category.split(',').map(cat => cat.trim());
+    }
+
     // Handle location update if provided
     if (req.body.location) {
         req.body.location = {
@@ -122,8 +133,8 @@ exports.updateVenue = catchAsync(async (req, res) => {
         req.params.id,
         req.body,
         {
-            new: true,  // Return updated venue
-            runValidators: true  // Run model validators
+            new: true,
+            runValidators: true
         }
     );
 
