@@ -13,20 +13,19 @@ exports.getVenues = catchAsync(async (req, res) => {
         category,
         lat,
         lng,
-        radius = 5000,
+        radius = 5000,  // Default 5km radius
         search,
         openNow
     } = req.query;
 
     let query = {};
 
-    // Apply category filter
+    // Update category filter to work with array
     if (category && category !== 'all') {
-        // Changed to handle single category filter in array
-        query.category = category;
+        query.category = { $in: [category] }; // This will match if the category array contains the requested category
     }
 
-    // Apply location filter
+    // Rest of your existing query logic
     if (lat && lng) {
         query.location = {
             $near: {
@@ -39,12 +38,10 @@ exports.getVenues = catchAsync(async (req, res) => {
         };
     }
 
-    // Apply text search
     if (search) {
         query.$text = { $search: search };
     }
 
-    // Apply open now filter
     if (openNow === 'true') {
         const now = new Date();
         const day = now.toLocaleLowerCase().split(',')[0];
@@ -175,7 +172,7 @@ exports.getVenueStats = catchAsync(async (req, res) => {
         // Group by category and count
         {
             $group: {
-                _id: "$category",
+                _id: "$category", // This is now a single string, not an array
                 count: { $sum: 1 },
                 avgRating: { $avg: "$rating" }
             }
@@ -184,8 +181,18 @@ exports.getVenueStats = catchAsync(async (req, res) => {
         { $sort: { count: -1 } }
     ]);
 
+    console.log('Aggregated stats:', stats); // Debug log
+
     res.status(200).json({
         status: 'success',
-        data: stats
+        data: {
+            categoryStats: stats.map(stat => ({
+                ...stat,
+                _id: stat._id // Ensure _id is a string
+            })),
+            totalVenues: await Venue.countDocuments(),
+            totalCategories: stats.length,
+            recentUpdates: await Venue.countDocuments()
+        }
     });
 });
