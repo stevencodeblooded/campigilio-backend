@@ -168,16 +168,20 @@ exports.deleteVenue = catchAsync(async (req, res) => {
     });
 });
 
-// Get venues stats (additional utility endpoint)
 exports.getVenueStats = catchAsync(async (req, res) => {
     const stats = await Venue.aggregate([
+        // Unwind the category array to create a document for each category
+        { $unwind: "$category" },
+        // Group by category and count
         {
             $group: {
-                _id: '$category',
+                _id: "$category",
                 count: { $sum: 1 },
-                avgRating: { $avg: '$rating' }
+                avgRating: { $avg: "$rating" }
             }
-        }
+        },
+        // Sort by count in descending order
+        { $sort: { count: -1 } }
     ]);
 
     res.status(200).json({
