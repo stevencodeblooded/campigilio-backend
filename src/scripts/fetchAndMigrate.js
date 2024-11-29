@@ -181,9 +181,40 @@ class VenueMigrator {
 
     async saveVenue(place, details, category) {
         try {
+            // Determine categories based on place types and initial category
+            let categories = [category]; // Start with the main category
+            
+            // Map Google place types to your categories
+            const placeTypeToCategory = {
+                'bar': 'bars',
+                'night_club': ['bars', 'clubs'],
+                'restaurant': 'restaurants',
+                'cafe': 'restaurants',
+                'lodging': 'hotels',
+                'store': 'shops',
+                'shopping_mall': 'shops',
+                'ski_resort': 'skiresorts'
+            };
+    
+            // Add additional categories based on place types
+            place.types.forEach(type => {
+                const mappedCategory = placeTypeToCategory[type];
+                if (mappedCategory) {
+                    if (Array.isArray(mappedCategory)) {
+                        mappedCategory.forEach(cat => {
+                            if (!categories.includes(cat)) {
+                                categories.push(cat);
+                            }
+                        });
+                    } else if (!categories.includes(mappedCategory)) {
+                        categories.push(mappedCategory);
+                    }
+                }
+            });
+    
             const venue = {
                 name: place.name,
-                category: category,
+                category: categories, // Now passing an array of categories
                 location: {
                     type: 'Point',
                     coordinates: [
@@ -200,9 +231,9 @@ class VenueMigrator {
                 placeType: [place.types[0]],
                 googlePlaceId: place.place_id
             };
-
+    
             const savedVenue = await Venue.create(venue);
-            console.log(`Saved venue: ${savedVenue.name} (${category})`);
+            console.log(`Saved venue: ${savedVenue.name} (${categories.join(', ')})`);
         } catch (error) {
             console.error(`Error saving venue ${place.name}:`, error.message);
         }
