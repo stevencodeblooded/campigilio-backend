@@ -66,21 +66,12 @@ exports.login = async (req, res) => {
 
 exports.getDashboardStats = async (req, res) => {
     try {
-        const stats = await Venue.aggregate([
+        // Get category statistics
+        const categoryStats = await Venue.aggregate([
             {
                 $group: {
                     _id: '$category',
-                    count: { $sum: 1 },
-                    avgRating: { $avg: '$rating' },
-                    totalVenues: { $sum: 1 }
-                }
-            },
-            {
-                $project: {
-                    category: '$_id',
-                    count: 1,
-                    avgRating: { $round: ['$avgRating', 1] },
-                    totalVenues: 1
+                    count: { $sum: 1 }
                 }
             }
         ]);
@@ -88,18 +79,20 @@ exports.getDashboardStats = async (req, res) => {
         // Get total venues count
         const totalVenues = await Venue.countDocuments();
 
-        // Get venues added in last 30 days
+        // Get recent updates (venues updated in last 30 days)
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        const recentVenues = await Venue.countDocuments({
-            createdAt: { $gte: thirtyDaysAgo }
+        const recentUpdates = await Venue.countDocuments({
+            updatedAt: { $gte: thirtyDaysAgo }
         });
 
         res.status(200).json({
             status: 'success',
             data: {
-                stats,
                 totalVenues,
-                recentVenues
+                categoryStats,
+                recentUpdates,
+                // Add the count of unique categories
+                totalCategories: categoryStats.length
             }
         });
     } catch (error) {
