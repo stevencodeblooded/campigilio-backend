@@ -10,102 +10,46 @@ const catchAsync = fn => {
 // Get all venues with filtering
 exports.getVenues = catchAsync(async (req, res) => {
     const { 
-        category,
-        lat,
-        lng,
-        radius = 5000,
         search,
-        openNow,
         page = 0,
         limit = 15
     } = req.query;
 
     try {
-        // Base match conditions
-        let matchConditions = {};
+        // Base query
+        let query = {};
 
-        // Add category filter
-        if (category && category !== 'all') {
-            matchConditions.category = category;
-        }
-
-        // Add name search if present
+        // Add search conditions if search parameter exists
         if (search) {
-            matchConditions.name = { $regex: search, $options: 'i' };
-        }
-
-        // Add open now filter
-        if (openNow === 'true') {
-            const now = new Date();
-            const day = now.toLocaleLowerCase().split(',')[0];
-            const time = now.toTimeString().slice(0, 5);
-            
-            matchConditions.$or = [
-                { is24_7: true },
-                {
-                    [`openingHours.${day}.open`]: { $lte: time },
-                    [`openingHours.${day}.close`]: { $gte: time }
-                }
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { address: { $regex: search, $options: 'i' } },
+                { category: { $regex: search, $options: 'i' } }
             ];
         }
 
-        let pipeline = [];
-
-        // If we have location coordinates, start with geoNear
-        if (lat && lng) {
-            pipeline.push({
-                $geoNear: {
-                    near: {
-                        type: "Point",
-                        coordinates: [parseFloat(lng), parseFloat(lat)]
-                    },
-                    distanceField: "distance",
-                    maxDistance: parseInt(radius),
-                    spherical: true
-                }
-            });
-        }
-
-        // Add match conditions
-        if (Object.keys(matchConditions).length > 0) {
-            pipeline.push({ $match: matchConditions });
-        }
-
-        // Add pagination
-        pipeline.push(
-            { $skip: parseInt(page) * parseInt(limit) },
-            { $limit: parseInt(limit) }
-        );
-
-        // Execute the aggregation
-        const venues = await Venue.aggregate(pipeline);
-        
         // Get total count for pagination
-        const countPipeline = [...pipeline];
-        // Remove skip and limit for count
-        countPipeline.splice(-2, 2);
-        countPipeline.push({ $count: "total" });
-        const countResult = await Venue.aggregate(countPipeline);
-        const total = countResult[0]?.total || 0;
+        const total = await Venue.countDocuments(query);
+
+        // Get paginated results
+        const venues = await Venue.find(query)
+            .skip(page * limit)
+            .limit(limit)
+            .exec();
 
         res.status(200).json({
             status: 'success',
-            results: venues.length,
-            total,
             data: venues,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                totalPages: Math.ceil(total / parseInt(limit))
-            }
+            total,
+            page: parseInt(page),
+            totalPages: Math.ceil(total / limit)
         });
 
     } catch (error) {
         console.error('Venue query error:', error);
         res.status(500).json({
             status: 'error',
-            message: 'An error occurred while fetching venues',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            message: 'An error occurred while fetching venues'
         });
     }
 });
